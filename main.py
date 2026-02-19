@@ -1,88 +1,82 @@
 import ollama
 import os
 import time
+import sys
 import re
-from concurrent.futures import ThreadPoolExecutor
 
-# --- CONFIGURATION ---
-# Choose your model (SmolLM3 3B is recommended for the project) [cite: 31, 38]
-CHOSEN_MODEL = 'qwen3:4b'  # Local model
-# CHOSEN_MODEL = 'qwen3-coder:480b-cloud'  # For Ollama Cloud 
-
-# Choose your host
-# Local Docker: http://ollama_server:11434 
-# Ollama Cloud: https://api.ollama.com (example endpoint) 
+# Connection Setup
 OLLAMA_HOST = os.getenv('OLLAMA_HOST', 'http://ollama_server:11434')
-
 client = ollama.Client(host=OLLAMA_HOST)
+# Using Qwen3 as the reasoning engine
+MODEL = 'qwen3:4b' 
 
-def test_api_connection():
-    """Diagnostic test to verify the API and model availability."""
-    print(f"[*] Testing connection to: {OLLAMA_HOST}")
-    try:
-        # Check if service is up 
-        models = client.list()
-        print("[+] API is reachable.")
-        
-        # Check if the specific model is pulled 
-        available_models = [m['name'] for m in models['models']]
-        if CHOSEN_MODEL in available_models or "cloud" in CHOSEN_MODEL:
-            print(f"[+] Model '{CHOSEN_MODEL}' is ready for use.")
-            return True
-        else:
-            print(f"[-] Model '{CHOSEN_MODEL}' not found locally. Please run: ollama pull {CHOSEN_MODEL}")
-            return False
-    except Exception as e:
-        print(f"[!] Connection failed: {e}")
-        return False
+def wait_for_ollama():
+    print(f"[*] Connecting to Ollama at {OLLAMA_HOST}...")
+    for i in range(10):
+        try:
+            client.list()
+            print("[+] Connected successfully!")
+            return
+        except Exception:
+            print(f"[-] Waiting for Ollama... ({i+1}/10)")
+            time.sleep(3)
+    sys.exit(1)
 
 def ask_llm(text_chunk, sub_query):
-    """Recursive tool for processing chunks[cite: 17, 21]."""
-    print(f"    [Task] Analyzing {len(text_chunk)} characters...")
+    """The recursive delegation tool: LLM calling itself on chunks."""
+    print(f"    [Recursive Call] Processing {len(text_chunk)} chars...")
     resp = client.chat(
-        model=CHOSEN_MODEL,
-        messages=[{'role': 'user', 'content': f"Text: {text_chunk}\n\nTask: {sub_query}"}]
+        model=MODEL,
+        messages=[{'role': 'user', 'content': f"Chunk: {text_chunk}\nTask: {sub_query}\nAnswer shortly."}]
     )
     return resp['message']['content']
 
-def run_rlm_logic(document_text, query):
-    """Executes the RLM inference-time strategy[cite: 18, 20]."""
-    print(f"[*] Starting RLM on {CHOSEN_MODEL}...")
+
+def run_rlm_recursive_logic(document_text, query):
+    print(f"[*] Analyzing document ({len(document_text)} chars) using {MODEL}...")
     
+    # Unified REPL environment
     repl_env = {
         "document": document_text, 
         "ask_llm": ask_llm, 
-        "result": None
+        "result": None,
+        "print": print  # Allow the model to print for debugging
     }
     
-    # Prompting for code-only output to avoid syntax errors [cite: 20]
     system_prompt = (
-        "You are an RLM Python agent. Access the 'document' variable. "
-        "Use 'ask_llm(chunk, query)' to solve the problem. "
-        "Output ONLY Python code. No text. Store the answer in 'result'."
+        "You are a Recursive Language Model. You write Python code to analyze the `document` variable. "
+        "Use the `ask_llm(chunk, query)` tool to process chunks. "
+        "CRITICAL: Output ONLY raw Python code. No backticks, no explanations. "
+        "Set the final answer to the `result` variable."
     )
 
     response = client.chat(
-        model=CHOSEN_MODEL,
+        model=MODEL, 
         messages=[
             {'role': 'system', 'content': system_prompt},
             {'role': 'user', 'content': query}
         ]
     )
     
-    # Clean the code block [cite: 20]
     clean_code = re.sub(r"```(?:python)?", "", response['message']['content']).replace("```", "").strip()
     
+    print(f"--- EXECUTING QWEN3 STRATEGY ---\n{clean_code}\n---")
+
     try:
-        exec(clean_code, repl_env)
+        # Using a single dict solves the 'NameError' for variables like 'document'
+        exec(clean_code, repl_env) 
         return repl_env.get("result")
     except Exception as e:
         return f"Execution Error: {e}"
 
 if __name__ == "__main__":
-    if test_api_connection():
-        # Needle in a haystack test 
-        test_doc = "noise " * 2000 + "SECRET: IMT_2026" + " noise " * 2000
-        print("\n[*] Running RLM Logic...")
-        res = run_rlm_logic(test_doc, "Search the document for the SECRET value.")
-        print(f"\n[!] FINAL RESULT: {res}")
+    wait_for_ollama()
+    
+    # Toy 'needle in a haystack' experiment [cite: 31]
+    haystack = "Irrelevant text. " * 1500 + "KEY_FOUND: IMT_ATL_2026" + " More noise. " * 1500
+    
+    # Task designed to trigger recursive behavior 
+    task = "Find the KEY_FOUND value. Use a loop to slice the document into 4000-char chunks and use ask_llm on each."
+    
+    final_answer = run_rlm_recursive_logic(haystack, task)
+    print(f"\n[!] RLM RESULT: {final_answer}")
