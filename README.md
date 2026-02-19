@@ -1,5 +1,3 @@
----
-
 # Recursive Language Model (RLM) Implementation
 
 A Python-based implementation of the **Recursive Language Model (RLM)** paradigm as proposed by Alex L. Zhang. This project enables Large Language Models (LLMs) like **Qwen3** and **SmolLM** to process arbitrarily long documents by treating them as external variables within a live Python REPL environment.
@@ -12,7 +10,6 @@ A Python-based implementation of the **Recursive Language Model (RLM)** paradigm
 * **Hybrid Inference**: Support for local execution via **Ollama** or high-performance inference via **Ollama Cloud**.
 * **Parallel Execution**: Leverages `ThreadPoolExecutor` to process document chunks simultaneously, reducing latency.
 
----
 
 ## 🛠 Prerequisites
 
@@ -20,7 +17,7 @@ A Python-based implementation of the **Recursive Language Model (RLM)** paradigm
 * NVIDIA Container Toolkit (for local GPU acceleration).
 * Python 3.11+.
 
----
+```
 
 ## 📦 Installation & Setup
 
