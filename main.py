@@ -27,7 +27,10 @@ def ask_llm(text_chunk, sub_query):
     print(f"    [Recursive Call] Processing {len(text_chunk)} chars...")
     resp = client.chat(
         model=MODEL,
-        messages=[{'role': 'user', 'content': f"Chunk: {text_chunk}\nTask: {sub_query}\nAnswer shortly."}]
+	messages=[{
+            'role': 'user', 
+            'content': f"CONTEXT: {text_chunk}\n\nTASK: {sub_query}\n\nINSTRUCTION: If found, output the value ONLY. If not found, output 'NOT_FOUND'."
+        }]
     )
     return resp['message']['content']
 
@@ -44,10 +47,12 @@ def run_rlm_recursive_logic(document_text, query):
     }
     
     system_prompt = (
-        "You are a Recursive Language Model. You write Python code to analyze the `document` variable. "
-        "Use the `ask_llm(chunk, query)` tool to process chunks. "
-        "CRITICAL: Output ONLY raw Python code. No backticks, no explanations. "
-        "Set the final answer to the `result` variable."
+	"You are a Recursive Language Model Senior Manager. "
+        "The document is too large for your memory. Write Python code to:\n"
+        "1. Slice `document` into chunks.\n"
+        "2. Call `ask_llm(chunk, 'Search for the secret key')` on each.\n"
+        "3. If the response is not 'NOT_FOUND', save it to the `result` variable and BREAK the loop.\n"
+        "Output ONLY code."
     )
 
     response = client.chat(
@@ -73,7 +78,7 @@ if __name__ == "__main__":
     wait_for_ollama()
     
     # Toy 'needle in a haystack' experiment [cite: 31]
-    haystack = "Irrelevant text. " * 1500 + "KEY_FOUND: IMT_ATL_2026" + " More noise. " * 1500
+    haystack = "Irrelevant text. " * 1500 + "KEY_FOUND: IMT_ATLANTIQUE" + " More noise. " * 1500
     
     # Task designed to trigger recursive behavior 
     task = "Find the KEY_FOUND value. Use a loop to slice the document into 4000-char chunks and use ask_llm on each."

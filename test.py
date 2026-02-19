@@ -1,56 +1,42 @@
 import ollama
 import os
-import sys
 
-# Configuration - Match your docker-compose or cloud settings
-OLLAMA_HOST = os.getenv('OLLAMA_HOST', 'http://localhost:11434')
-# Use the model you integrated (qwen3:4b or smollm:1.7b)
-MODEL_NAME = 'qwen3:4b' 
+# CONFIGURATION
+MODEL = "qwen3:4b"
+HOST = os.getenv('OLLAMA_HOST', 'http://localhost:11434') # Use localhost if running outside docker
+client = ollama.Client(host=HOST)
 
-def run_diagnostics():
-    print(f"--- RLM Environment Diagnostic ---")
-    print(f"[*] Target Host: {OLLAMA_HOST}")
-    print(f"[*] Target Model: {MODEL_NAME}")
+def test_pipeline():
+    print(f"--- RLM System Check ---")
     
-    client = ollama.Client(host=OLLAMA_HOST)
-
-    # 1. Check API Reachability
+    # Test 1: Connectivity
     try:
-        models_info = client.list()
-        print("[+] SUCCESS: Ollama API is reachable.")
-    except Exception as e:
-        print(f"[!] ERROR: Cannot connect to Ollama. Is the container running?")
-        print(f"    Details: {e}")
-        sys.exit(1)
+        client.list()
+        print("[1/3] Connection: OK")
+    except:
+        print("[1/3] Connection: FAILED (Check if Docker is running)")
+        return
 
-    # 2. Check if Model is Pulled
-    available = [m['name'] for m in models_info['models']]
-    if MODEL_NAME in available or any(MODEL_NAME in m for m in available):
-        print(f"[+] SUCCESS: Model '{MODEL_NAME}' is available locally.")
+    # Test 2: Basic Inference
+    print(f"[2/3] Testing {MODEL} Inference...", end="", flush=True)
+    resp = client.chat(model=MODEL, messages=[{'role': 'user', 'content': 'Say "RLM_READY"'}])
+    if "RLM_READY" in resp['message']['content']:
+        print(" OK")
     else:
-        print(f"[-] WARNING: Model '{MODEL_NAME}' not found in {available}.")
-        print(f"    Action: Run 'docker exec -it ollama_server ollama pull {MODEL_NAME}'")
+        print(f" ERROR (Got: {resp['message']['content']})")
 
-    # 3. Test RLM-style "Code Only" Generation
-    print(f"[*] Testing RLM Code Generation (Inference-Time Strategy)...")
-    test_prompt = "Write a one-line Python script to set result = 40 + 2. Output ONLY code."
-    
+    # Test 3: RLM Tool-Use Logic
+    print(f"[3/3] Testing Logic Scoping...")
+    env = {"document": "SECRET: 123", "result": None}
+    code = "result = document.split(':')[1].strip()"
     try:
-        response = client.chat(
-            model=MODEL_NAME,
-            messages=[{'role': 'user', 'content': test_prompt}]
-        )
-        content = response['message']['content'].strip()
-        print(f"[+] Raw Model Output: {content}")
-        
-        # Validation for RLM paradigm
-        if "result" in content and "42" not in content: # Checking if it wrote logic vs just the answer
-             print("[+] SUCCESS: Model produced executable logic.")
+        exec(code, {}, env)
+        if env["result"] == "123":
+            print("      REPL Scope: OK")
         else:
-             print("[!] NOTE: Model might need stricter system prompting for RLM tasks.")
-
+            print(f"      REPL Scope: FAILED (Got {env['result']})")
     except Exception as e:
-        print(f"[!] ERROR: Inference failed: {e}")
+        print(f"      REPL Scope: CRASHED ({e})")
 
 if __name__ == "__main__":
-    run_diagnostics()
+    test_pipeline()

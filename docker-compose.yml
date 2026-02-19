@@ -17,8 +17,10 @@ services:
     container_name: rlm_executor
     depends_on:
       - ollama
-    environment:
-      - OLLAMA_HOST=http://ollama_server:11434
+    env_file:
+      - .env
+    #environment:
+    #  - OLLAMA_HOST=http://ollama_server:11434
     volumes:
       - .:/app
 
