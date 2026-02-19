@@ -4,7 +4,7 @@
 
 A Python-based implementation of the **Recursive Language Model (RLM)** paradigm as proposed by Alex L. Zhang. This project enables Large Language Models (LLMs) like **Qwen3** and **SmolLM** to process arbitrarily long documents by treating them as external variables within a live Python REPL environment.
 
-## 🚀 Key Features
+##  Key Features
 
 * **Infinite Context Scaling**: Processes documents far beyond built-in context windows (100k+ characters) by avoiding "context rot".
 * **Recursive Delegation**: Allows the root model to act as a "Senior Manager," writing code to call sub-instances of itself on specific text chunks.
