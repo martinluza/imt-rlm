@@ -65,10 +65,32 @@ print(f"Available keys in dataset: {list(example.keys())}")
 
 # The 'dnd' subset uses 'document' for the transcript
 context_data = example.get('context_window_text', "")
-#target_query = example.get('question', "No question found.")
-target_query = "Find the very first time Liam (Vax/Caleb) makes a roll. What was the number rolled and what was it for?"
+target_query = example.get('question', "No question found.")
+#target_query = "Find the very first time Liam (Vax/Caleb) makes a roll. What was the number rolled and what was it for?"
 
 print(f"Dataset loaded. Question: {target_query[:50]}...")
+
+ground_truth = example.get('answer', "") # This is the "Gold" answer from the dataset
+
+def validate_answer(llm_output, gold_answer):
+    """Compares the extracted FINAL() value with the dataset answer."""
+    # Extract content inside FINAL(...)
+    match = re.search(r"FINAL\((.*?)\)", llm_output, re.DOTALL)
+    if not match:
+        return "No FINAL() tag found to validate."
+    
+    extracted_ans = match.group(1).strip().strip("'\"")
+    gold_str = str(gold_answer).strip()
+    
+    print("\n" + "="*30)
+    print(f"VALIDATION RESULTS")
+    print(f"Extracted Answer: {extracted_ans}")
+    print(f"Dataset Answer:   {gold_str}")
+    
+    if extracted_ans.lower() in gold_str.lower() or gold_str.lower() in extracted_ans.lower():
+        return "✅ SUCCESS: The answer matches the dataset."
+    else:
+        return "❌ FAILURE: The answer does not match the dataset."
 
 def llm_query(query_text):
     """Sub-LLM function called by the REPL loop."""
@@ -85,6 +107,8 @@ def run_rlm_system(user_prompt, context):
         "type": type,  # Ajoutez ceci pour qu'il puisse faire print(type(context))
         "len": len
     }
+
+    final_content = ""
     for iteration in range(10):
         response = client.chat(model=MODEL, messages=messages)
         content = response['message']['content']
@@ -93,7 +117,7 @@ def run_rlm_system(user_prompt, context):
         print(f"\n--- Iteration {iteration} ---\n{content}")
 
         if "FINAL(" in content or "FINAL_VAR(" in content:
-            print("\n[SYSTEM] Termination keyword 'FINISHED' detected.")
+            final_content = content
             break
 
         code_match = re.search(r'```repl\n(.*?)\n```', content, re.DOTALL)
@@ -110,6 +134,10 @@ def run_rlm_system(user_prompt, context):
             messages.append({'role': 'user', 'content': f"REPL Output:\n{result}"})
         else:
             messages.append({'role': 'user', 'content': "Please use a ```repl block or provide a FINAL() answer."})
+
+    validation_report = validate_answer(final_content, ground_truth)
+    print(validation_report)
+    print("="*30)
 
 # --- Prepare the Prompt ---
 prompt_instructions = f"""
