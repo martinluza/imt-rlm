@@ -1,0 +1,2 @@
+lanzar docker
+docker run -it --env-file .env -v C:\Users\Usuario\Documents\Facultad\IMT\PAIA\imt-rlm:/app imt-rlm-rlm_app /bin/bash

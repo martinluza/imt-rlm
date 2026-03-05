@@ -1,26 +1,15 @@
 services:
-  ollama:
-    image: ollama/ollama:latest
-    container_name: ollama_server
-    volumes:
-      - ollama_data:/root/.ollama
-    deploy:
-      resources:
-        reservations:
-          devices:
-            - driver: nvidia
-              count: all
-              capabilities: [gpu]
-
   rlm_app:
     build: .
     container_name: rlm_executor
+<<<<<<< Updated upstream
     depends_on:
       - ollama
     environment:
       - OLLAMA_HOST=http://ollama_server:11434
+=======
+    env_file:
+      - .env
+>>>>>>> Stashed changes
     volumes:
       - .:/app
-
-volumes:
-  ollama_data:

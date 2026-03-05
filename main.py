@@ -4,79 +4,52 @@ import time
 import sys
 import re
 
-# Connection Setup
-OLLAMA_HOST = os.getenv('OLLAMA_HOST', 'http://ollama_server:11434')
-client = ollama.Client(host=OLLAMA_HOST)
-# Using Qwen3 as the reasoning engine
-MODEL = 'qwen3:4b' 
+import requests
+from ollama import Client
 
-def wait_for_ollama():
-    print(f"[*] Connecting to Ollama at {OLLAMA_HOST}...")
-    for i in range(10):
-        try:
-            client.list()
-            print("[+] Connected successfully!")
-            return
-        except Exception:
-            print(f"[-] Waiting for Ollama... ({i+1}/10)")
-            time.sleep(3)
-    sys.exit(1)
-
-def ask_llm(text_chunk, sub_query):
-    """The recursive delegation tool: LLM calling itself on chunks."""
-    print(f"    [Recursive Call] Processing {len(text_chunk)} chars...")
-    resp = client.chat(
-        model=MODEL,
-        messages=[{'role': 'user', 'content': f"Chunk: {text_chunk}\nTask: {sub_query}\nAnswer shortly."}]
-    )
-    return resp['message']['content']
+api_key = os.getenv("OLLAMA_API_KEY")
+endpoint = os.getenv("OLLAMA_ENDPOINT")
 
 
-def run_rlm_recursive_logic(document_text, query):
-    print(f"[*] Analyzing document ({len(document_text)} chars) using {MODEL}...")
-    
-    # Unified REPL environment
-    repl_env = {
-        "document": document_text, 
-        "ask_llm": ask_llm, 
-        "result": None,
-        "print": print  # Allow the model to print for debugging
-    }
-    
-    system_prompt = (
-        "You are a Recursive Language Model. You write Python code to analyze the `document` variable. "
-        "Use the `ask_llm(chunk, query)` tool to process chunks. "
-        "CRITICAL: Output ONLY raw Python code. No backticks, no explanations. "
-        "Set the final answer to the `result` variable."
-    )
+client = Client(
+    host=endpoint,
+    headers={'Authorization': 'Bearer ' + api_key}
+)
 
-    response = client.chat(
-        model=MODEL, 
-        messages=[
-            {'role': 'system', 'content': system_prompt},
-            {'role': 'user', 'content': query}
-        ]
-    )
+#sin memoria de contexto
+while True:
+  prompt = input("Enter your prompt: ")
+  messages = [
+    {
+      'role': 'user',
+      'content': prompt,
+    },
+  ]  
+  ## deepseek-v3.1:671b-cloud, gpt-oss:20b-cloud, gpt-oss:120b-cloud, kimi-k2:1t-cloud, qwen3-coder:480b-cloud, kimi-k2-thinking
+  for part in client.chat('gpt-oss:120b', messages=messages, stream=True):
+    print(part.message.content, end='', flush=True)
     
-    clean_code = re.sub(r"```(?:python)?", "", response['message']['content']).replace("```", "").strip()
-    
-    print(f"--- EXECUTING QWEN3 STRATEGY ---\n{clean_code}\n---")
+  
+#Con memoria de contexto
+messages = []
 
-    try:
-        # Using a single dict solves the 'NameError' for variables like 'document'
-        exec(clean_code, repl_env) 
-        return repl_env.get("result")
-    except Exception as e:
-        return f"Execution Error: {e}"
+while True:
+  prompt = input("Enter your prompt: " )
+  messages.append({
+      "role": "user",
+      "content": prompt
+  }) 
+  response_text = ""
+  for part in client.chat(
+      model='gpt-oss:20b',
+      messages=messages,
+      stream=True
+  ):
+      print(part.message.content, end='', flush=True)
+      response_text += part.message.content
+  print()
+  messages.append({
+      "role": "assistant",
+      "content": response_text
+  })
 
-if __name__ == "__main__":
-    wait_for_ollama()
-    
-    # Toy 'needle in a haystack' experiment [cite: 31]
-    haystack = "Irrelevant text. " * 1500 + "KEY_FOUND: IMT_ATL_2026" + " More noise. " * 1500
-    
-    # Task designed to trigger recursive behavior 
-    task = "Find the KEY_FOUND value. Use a loop to slice the document into 4000-char chunks and use ask_llm on each."
-    
-    final_answer = run_rlm_recursive_logic(haystack, task)
-    print(f"\n[!] RLM RESULT: {final_answer}")
