@@ -1,4 +1,5 @@
 import ollama
+import random
 from datasets import load_dataset
 
 # --- Configuration ---
@@ -8,11 +9,14 @@ client = ollama.Client(host=OLLAMA_HOST)
 
 # --- Chargement des données ---
 print("Chargement de l'exemple Oolongbench pour test DIRECT...")
-dataset = load_dataset("oolongbench/oolong-real", "dnd", split="validation", streaming=True)
-example = next(iter(dataset))
+dataset = load_dataset("oolongbench/oolong-real", "dnd", split="validation")
+#example = next(iter(dataset))
+example = random.choice(dataset)
 
 context_data = example.get('context_window_text', "")
 target_query = example.get('question', "")
+
+print(f"Dataset loaded. Question: {target_query}")
 ground_truth = example.get('answer', "")
 
 # --- Test Direct (Zero-Shot) ---
@@ -36,11 +40,6 @@ Provide a concise answer based ONLY on the context provided.
         print("\n--- VALIDATION ---")
         print(f"Réponse attendue (Dataset) : {ground_truth}")
         
-        # Vérification simple
-        if str(ground_truth).lower() in answer.lower():
-            print("Résultat : SUCCÈS")
-        else:
-            print("Résultat : ÉCHEC")
             
     except Exception as e:
         print(f"Erreur : {e} (Probablement un dépassement de contexte)")

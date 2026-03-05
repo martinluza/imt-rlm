@@ -2,6 +2,7 @@ import ollama
 import re
 import io
 import sys
+import random
 from contextlib import redirect_stdout
 from datasets import load_dataset
 
@@ -57,8 +58,9 @@ client = ollama.Client(host=OLLAMA_HOST)
 # --- Load Oolong-real Haystack ---
 print("Loading Oolongbench data...")
 # We load the 'dnd' subset which contains Critical Role transcripts
-dataset = load_dataset("oolongbench/oolong-real", "dnd", split="validation", streaming=True)
-example = next(iter(dataset)) 
+dataset = load_dataset("oolongbench/oolong-real", "dnd", split="validation")
+#example = next(iter(dataset)) 
+example = random.choice(dataset)
 
 # Print keys to console for debugging (helpful for your logs)
 print(f"Available keys in dataset: {list(example.keys())}")
