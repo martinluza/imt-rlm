@@ -29,9 +29,9 @@ Think step by step carefully, plan, and execute this plan immediately in your re
 """
 
 # Str that goes past context window
-long_str = "This is a very long string. " * 15000  # Adjust the multiplier to increase the length as needed
+long_str = "This is a very long string. " * 150  # Adjust the multiplier to increase the length as needed
 long_str += "The chicken is pink"
-long_str += "This is a very long string. " * 15000  # Adjust the multiplier to increase the length as needed
+long_str += "This is a very long string. " * 150  # Adjust the multiplier to increase the length as needed
 
 messages = [
   {
@@ -45,10 +45,9 @@ while True:
      messages += [
        {'role': 'user', 'content': output_str},
      ]
-     user_input = input('Chat with history: ')
      response = chat(
         'gemma3',
-        messages=[*messages, {'role': 'user', 'content': user_input}],
+        messages=messages,
         stream=True
       )
   else:
@@ -88,12 +87,18 @@ while True:
       match_repl = re.search(r"```repl(.*?)```", full_assistant_response, re.DOTALL)
       if match or match_repl:
           print("Found Python code block:")
-          code_string = match.group(1) if match else match_repl.group(1)
-      code_string = f"long_str = {long_str} \n" + code_string
+          if match:
+              code_string = match.group(1).strip()
+          else:
+              code_string = match_repl.group(1).strip()
+          print(code_string)
+      code_string = f"long_str = \"{long_str}\" \n" + code_string
+      print(code_string)
       output_buffer = io.StringIO()
 
       with contextlib.redirect_stdout(output_buffer):
         exec(code_string)
+        print("Executed code block:")
 
       output_str = output_buffer.getvalue()
       answer_LLM = True
