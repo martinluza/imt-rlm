@@ -1,15 +1,7 @@
 services:
-  rlm_app:
+  app:
     build: .
-    container_name: rlm_executor
-<<<<<<< Updated upstream
-    depends_on:
-      - ollama
-    environment:
-      - OLLAMA_HOST=http://ollama_server:11434
-=======
-    env_file:
-      - .env
->>>>>>> Stashed changes
     volumes:
       - .:/app
+    env_file:
+      - .env
