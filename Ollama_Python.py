@@ -69,7 +69,10 @@ dataset = load_dataset("oolongbench/oolong-real", "dnd", split="validation", str
 context = next(iter(dataset))
 context_data = context.get('context_window_text', "")
 context_data = context_data[:40000] # We take only the first 40000 characters
-context_data = context_data[:8999 ] + "Marcelo's dog is named 'Rex'." + context_data[8999:]
+
+NEEDLE = "Marcelo's dog is named 'Rex'."
+QUERY = "What is the name of Marcelo's dog?"
+context_data = context_data[:8999 ] + NEEDLE + context_data[8999:]
 
 correct_answer = "Rex"
 
@@ -78,7 +81,7 @@ print(context_data[8900:9050])
 messages = [
   {
     'role': 'user',
-    'content': f"{REPL_SYSTEM_PROMPT}. Remember that the name of the context variable is 'context_data' and it's already defined, DO NOT WRITE YOU'RE OWN VARIABLE. Now, please answer the following query based on the context: What is the name of Marcelo's dog?"
+    'content': f"{REPL_SYSTEM_PROMPT}. Remember that the name of the context variable is 'context_data' and it's already defined, DO NOT WRITE YOU'RE OWN VARIABLE. Now, please answer the following query based on the context: {QUERY}"
   }
 ]
 
